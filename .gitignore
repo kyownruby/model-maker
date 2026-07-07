@@ -7,3 +7,4 @@ viewer/public/models/vrm/*.vrm
 viewer/public/models/live2d/*
 !viewer/public/models/live2d/.gitkeep
 mcp-server/dist/
+__pycache__/
