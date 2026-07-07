@@ -1,0 +1,13 @@
+# Python 3.10+
+# インストール手順（pytoshopはビルドの都合で2段階になる点に注意）:
+#   pip install -r requirements.txt
+#   pip install "setuptools==68.2.2" && pip install pytoshop --no-build-isolation
+#
+# torchはCPU版で十分:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+numpy
+pillow
+scipy
+onnxruntime
+torch
+torchvision
