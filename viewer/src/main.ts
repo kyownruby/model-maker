@@ -3,6 +3,7 @@ import { createVrmAdapter } from './vrm/vrmAdapter'
 import { createLive2dAdapter } from './live2d/live2dAdapter'
 import { buildSliderPanel, syncSliderValues } from './ui/sliders'
 import { startBridge } from './bridge/wsBridge'
+import { startLipSync, type LipSync } from './lipsync'
 
 /**
  * デフォルトのサンプルモデル。
@@ -28,6 +29,11 @@ const query = new URLSearchParams(location.search)
 const modelUrls: Record<ModelKind, string> = {
   vrm: query.get('vrm') ?? DEFAULT_VRM_URL,
   live2d: query.get('live2d') ?? DEFAULT_LIVE2D_URL,
+}
+
+// OBSモード: UIを隠して透過背景でモデルだけを描画する（ブラウザソース用）
+if (query.get('obs') === '1') {
+  document.body.classList.add('obs-mode')
 }
 
 let currentAdapter: ModelAdapter | null = null
@@ -128,8 +134,42 @@ const bridge = startBridge({
   onStatusChange: (connected) => {
     wsStatusEl.textContent = connected ? 'MCP: connected' : 'MCP: offline'
     wsStatusEl.classList.toggle('connected', connected)
+    // OBSモードではUIが見えないため、テストやOBSカスタムCSSから参照できる印を残す
+    document.body.dataset.mcp = connected ? 'connected' : 'offline'
   },
 })
+
+// --- 音声連動リップシンク ---
+const lipsyncButton = document.getElementById('lipsync-toggle') as HTMLButtonElement
+let lipsync: LipSync | null = null
+
+async function toggleLipSync(): Promise<void> {
+  if (lipsync) {
+    lipsync.stop()
+    lipsync = null
+    lipsyncButton.classList.remove('active')
+    document.body.dataset.lipsync = 'off'
+    return
+  }
+  try {
+    lipsync = await startLipSync(() => currentAdapter, {
+      deviceHint: query.get('mic') ?? undefined,
+      gain: query.get('lipsync_gain') ? Number(query.get('lipsync_gain')) : undefined,
+    })
+    lipsyncButton.classList.add('active')
+    document.body.dataset.lipsync = 'on'
+  } catch (error) {
+    console.error(error)
+    statusEl.textContent = `lipsync error: ${error instanceof Error ? error.message : error}`
+  }
+}
+
+lipsyncButton.addEventListener('click', () => void toggleLipSync())
+
+// ?lipsync=1 で自動開始（OBSブラウザソースはユーザー操作なしでマイク許可される）
+if (query.get('lipsync') === '1') {
+  void toggleLipSync()
+}
 
 tabs.forEach((tab) => {
   tab.addEventListener('click', () => {

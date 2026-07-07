@@ -113,6 +113,34 @@ body {
   border-color: #3c6e4c;
 }
 
+#lipsync-toggle {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#lipsync-toggle.active {
+  color: #ffb86b;
+  border-color: #8a6a3c;
+}
+
+/*
+ * OBSモード（?obs=1）: ブラウザソース取り込み用。
+ * UIをすべて隠し、背景を完全透過にしてモデルだけを描画する。
+ */
+body.obs-mode {
+  background: transparent;
+}
+
+body.obs-mode #toolbar,
+body.obs-mode #panel {
+  display: none;
+}
+
 #layout {
   display: flex;
   flex: 1;
