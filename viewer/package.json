@@ -12,6 +12,7 @@
   "dependencies": {
     "@jannchie/pixi-live2d-display": "^1.2.0",
     "@pixiv/three-vrm": "^3.5.4",
+    "jszip": "^3.10.1",
     "pixi.js": "^8.19.0",
     "three": "^0.185.1"
   },

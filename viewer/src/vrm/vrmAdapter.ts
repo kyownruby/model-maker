@@ -178,7 +178,29 @@ export async function createVrmAdapter(
 
     listMotions: () => [],
 
-    playMotion: () => false, // VRMのモーション再生（VRMA等）はPhase 3以降で対応
+    playMotion: () => false, // VRMのモーション再生（VRMA等）は将来対応
+
+    listExportFormats: () => ['vrm', 'glb'],
+
+    exportModel: async (format) => {
+      const base = vrm.meta && 'name' in vrm.meta
+        ? ((vrm.meta as { name?: string }).name ?? 'model')
+        : 'model'
+      if (format === 'vrm') {
+        // VRM拡張を保持したまま書き出せるJSエクスポータは無いため、元ファイルをそのまま返す
+        const res = await fetch(modelUrl)
+        if (!res.ok) return null
+        return { filename: `${base}.vrm`, blob: await res.blob() }
+      }
+      if (format === 'glb') {
+        // 汎用GLB（VRM拡張・表情は含まれない。three.js等での表示用）
+        const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js')
+        const result = await new GLTFExporter().parseAsync(vrm.scene, { binary: true })
+        if (!(result instanceof ArrayBuffer)) return null
+        return { filename: `${base}.glb`, blob: new Blob([result], { type: 'model/gltf-binary' }) }
+      }
+      return null
+    },
 
     getParameter: (id) => {
       if (id.startsWith('expression.')) {

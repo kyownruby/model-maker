@@ -137,6 +137,43 @@ export async function createLive2dAdapter(
       return model.motion(resolved, undefined, MotionPriority.FORCE)
     },
 
+    listExportFormats: () => ['live2d_zip'],
+
+    exportModel: async (format) => {
+      if (format !== 'live2d_zip') return null
+      // model3.json と、そこから参照される全ファイルを集めてzipにする
+      // （VTube Studio等はフォルダ単位で読むため一式で配布するのが実用的）
+      const { default: JSZip } = await import('jszip')
+      const baseUrl = new URL(modelUrl, location.href)
+      const settingsRes = await fetch(baseUrl)
+      if (!settingsRes.ok) return null
+      const settingsText = await settingsRes.text()
+
+      const files = new Set<string>()
+      const walk = (node: unknown): void => {
+        if (typeof node === 'string') {
+          if (/\.(moc3|png|json)$/i.test(node)) files.add(node)
+        } else if (Array.isArray(node)) {
+          node.forEach(walk)
+        } else if (node && typeof node === 'object') {
+          Object.values(node).forEach(walk)
+        }
+      }
+      walk((JSON.parse(settingsText) as { FileReferences?: unknown }).FileReferences)
+
+      const zip = new JSZip()
+      const settingsName = baseUrl.pathname.split('/').pop() ?? 'model3.json'
+      zip.file(settingsName, settingsText)
+      for (const file of files) {
+        const res = await fetch(new URL(file, baseUrl))
+        if (!res.ok) throw new Error(`取得失敗: ${file} (${res.status})`)
+        zip.file(file, await res.arrayBuffer())
+      }
+      const blob = await zip.generateAsync({ type: 'blob' })
+      const stem = settingsName.replace(/\.model3\.json$/i, '')
+      return { filename: `${stem}.live2d.zip`, blob }
+    },
+
     getParameter: (id) => {
       if (!id.startsWith('param.')) return undefined
       return overrides.get(rawId(id)) ?? coreModel.getParameterValueById(rawId(id))

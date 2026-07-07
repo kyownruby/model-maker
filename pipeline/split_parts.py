@@ -35,6 +35,12 @@ def main() -> int:
         action="store_true",
         help="背景除去(rembg)をスキップする（既に透過済みの素材向け）",
     )
+    parser.add_argument(
+        "--expressions",
+        type=Path,
+        default=None,
+        help="表情差分ディレクトリ（face_<表情名>.png の命名規則。例: face_smile.png）",
+    )
     args = parser.parse_args()
 
     if not args.input.exists():
@@ -58,17 +64,32 @@ def main() -> int:
     # 3. レイヤー組み立て
     layers = build_layers(rgba, label_map)
 
+    # 3b. 表情差分の取り込み
+    expression_layers = []
+    if args.expressions and args.expressions.is_dir():
+        from modelmaker_pipeline.expressions import (
+            build_expression_layers,
+            discover_expression_files,
+        )
+
+        for name, path in discover_expression_files(args.expressions):
+            print(f"[cli] processing expression diff: {path.name}")
+            expression_layers += build_expression_layers(model, rgba, label_map, name, path)
+        print(f"[cli] {len(expression_layers)} expression part layers extracted")
+
     # 4. 出力
     stem = args.input.stem
     psd_path = args.output / f"{stem}.psd"
-    skipped = write_psd(layers, rgba.size, psd_path)
+    skipped = write_psd(layers, rgba.size, psd_path, expression_layers)
     print(f"[cli] wrote {psd_path}")
     if skipped:
         print(f"[cli] WARNING: 検出できず空になったレイヤー（要手動作成）: {', '.join(skipped)}")
 
     for i, part in enumerate(layers):
         part.image.save(parts_dir / f"{i:02d}_{part.name}.png")
-    print(f"[cli] wrote {len(layers)} part PNGs -> {parts_dir}/")
+    for part in expression_layers:
+        part.image.save(parts_dir / f"exp_{part.name}.png")
+    print(f"[cli] wrote {len(layers) + len(expression_layers)} part PNGs -> {parts_dir}/")
 
     seg_rgb = np.zeros((*label_map.shape, 3), dtype=np.uint8)
     for cls, color in enumerate(PALETTE):
@@ -81,6 +102,7 @@ def main() -> int:
         "input": str(args.input),
         "size": [rgba.width, rgba.height],
         "layers": [{"name": p.name, "coverage": p.coverage} for p in layers],
+        "expression_layers": [{"name": p.name, "coverage": p.coverage} for p in expression_layers],
         "empty_layers_needing_manual_work": skipped,
         "notes": [
             "眉は現行モデルでは分類されません（髪または顔に含まれます）。Cubism Editorで分離してください。",

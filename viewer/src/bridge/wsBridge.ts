@@ -5,6 +5,19 @@ import * as commands from './commands'
 
 const RECONNECT_DELAY_MS = 3000
 
+/** Blob → base64（大きなファイルでもスタックを溢れさせないようFileReaderを使う） */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = String(reader.result)
+      resolve(dataUrl.slice(dataUrl.indexOf(',') + 1))
+    }
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(blob)
+  })
+}
+
 /** ビューア本体（main.ts）がブリッジへ提供するフック */
 export interface BridgeHost {
   getAdapter(): ModelAdapter | null
@@ -122,6 +135,30 @@ export function startBridge(host: BridgeHost, wsUrl?: string): Bridge {
           const applied = commands.setMouth(adapter, Number(command.args.open))
           host.onRemoteChange()
           respond(command.id, true, { applied })
+          return
+        }
+        case 'listExportFormats': {
+          respond(command.id, true, { formats: adapter.listExportFormats() })
+          return
+        }
+        case 'exportModel': {
+          const format = String(command.args.format)
+          const exported = await adapter.exportModel(format)
+          if (!exported) {
+            respond(
+              command.id,
+              false,
+              undefined,
+              `この形式では書き出せません: "${format}"。利用可能: ${adapter.listExportFormats().join(', ')}`,
+            )
+            return
+          }
+          const dataBase64 = await blobToBase64(exported.blob)
+          respond(command.id, true, {
+            filename: exported.filename,
+            size: exported.blob.size,
+            dataBase64,
+          })
           return
         }
         case 'playMotion': {

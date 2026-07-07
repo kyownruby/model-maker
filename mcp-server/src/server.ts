@@ -6,6 +6,8 @@
  *
  * 注意: stdio がMCPのプロトコルチャネルなので、console.log は使わないこと（stderrのみ）。
  */
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
@@ -140,6 +142,62 @@ server.registerTool(
     },
   },
   ({ url }) => run('loadModel', { url }),
+)
+
+server.registerTool(
+  'list_export_formats',
+  {
+    description: '現在のモデルで書き出せる形式の一覧を返す（vrm / glb / live2d_zip など）。',
+    inputSchema: {},
+  },
+  () => run('listExportFormats'),
+)
+
+server.registerTool(
+  'export_model',
+  {
+    description:
+      'モデルをファイルに書き出す。vrm=元のVRMファイル、glb=汎用3D（VRM拡張なし）、' +
+      'live2d_zip=Live2D一式（VTube Studio等で使える構成）。' +
+      'pmx(MMD)は直接書き出せない: VRMを書き出した後、VRoid2Pmx等の変換ツールを使うこと（docs/3d-and-mmd-route.md参照）。',
+    inputSchema: {
+      format: z.string().describe('書き出し形式（list_export_formatsで確認）'),
+      path: z
+        .string()
+        .optional()
+        .describe('保存先ファイルパス。省略時は ./exports/<モデル名>.<拡張子>'),
+    },
+  },
+  async ({ format, path: destPath }) => {
+    try {
+      const result = (await bridge.send('exportModel', { format })) as {
+        filename: string
+        size: number
+        dataBase64: string
+      }
+      const dest = resolve(destPath ?? join('exports', result.filename))
+      mkdirSync(dirname(dest), { recursive: true })
+      writeFileSync(dest, Buffer.from(result.dataBase64, 'base64'))
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify({ saved: dest, bytes: result.size }, null, 2),
+          },
+        ],
+      }
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+        isError: true,
+      }
+    }
+  },
 )
 
 server.registerTool(
