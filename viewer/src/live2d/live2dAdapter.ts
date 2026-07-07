@@ -1,5 +1,5 @@
 import { Application, Ticker } from 'pixi.js'
-import { Live2DModel } from '@jannchie/pixi-live2d-display/cubism4'
+import { Live2DModel, MotionPriority } from '@jannchie/pixi-live2d-display/cubism4'
 import type { ModelAdapter, ParameterInfo } from '../core/types'
 
 /**
@@ -101,11 +101,41 @@ export async function createLive2dAdapter(
 
   const rawId = (id: string) => id.slice('param.'.length)
 
+  // exp3.json 由来の表情名と、motion3.json のグループ名を設定ファイルから列挙する
+  const settings = internalModel.settings as unknown as {
+    expressions?: Array<{ Name: string }>
+    motions?: Record<string, unknown[]>
+  }
+  const expressionNames = settings.expressions?.map((e) => e.Name) ?? []
+  const motionGroups = Object.keys(settings.motions ?? {})
+
   return {
     kind: 'live2d',
     modelName: modelUrl.split('/').pop() ?? 'Live2D',
 
     listParameters: () => parameters,
+
+    listExpressions: () => expressionNames,
+
+    setExpression: async (name, weight) => {
+      const resolved = expressionNames.find((n) => n.toLowerCase() === name.toLowerCase())
+      if (!resolved) return false
+      // Live2Dの表情はon/off切替のみ（重み指定は非対応）。weight=0で解除する
+      if (weight <= 0) {
+        internalModel.motionManager.expressionManager?.resetExpression()
+        return true
+      }
+      return model.expression(resolved)
+    },
+
+    listMotions: () => motionGroups,
+
+    playMotion: async (name) => {
+      const resolved = motionGroups.find((g) => g.toLowerCase() === name.toLowerCase())
+      if (!resolved) return false
+      // MCP経由の指示は「今すぐ再生」が期待値なので、再生中モーションに割り込む
+      return model.motion(resolved, undefined, MotionPriority.FORCE)
+    },
 
     getParameter: (id) => {
       if (!id.startsWith('param.')) return undefined

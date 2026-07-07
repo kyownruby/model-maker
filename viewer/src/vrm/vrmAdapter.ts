@@ -143,11 +143,42 @@ export async function createVrmAdapter(
     })),
   ]
 
+  // 「smile」等の一般名 → VRM標準Expression名のエイリアス
+  const EXPRESSION_ALIASES: Record<string, string> = {
+    smile: 'happy',
+    joy: 'happy',
+    laugh: 'happy',
+    anger: 'angry',
+    sorrow: 'sad',
+    surprise: 'surprised',
+  }
+  const resolveExpression = (name: string): string | undefined => {
+    if (expressionNames.includes(name)) return name
+    const lower = name.toLowerCase()
+    const caseInsensitive = expressionNames.find((n) => n.toLowerCase() === lower)
+    if (caseInsensitive) return caseInsensitive
+    const alias = EXPRESSION_ALIASES[lower]
+    return alias && expressionNames.includes(alias) ? alias : undefined
+  }
+
   return {
     kind: 'vrm',
     modelName: vrm.meta && 'name' in vrm.meta ? ((vrm.meta as { name?: string }).name ?? 'VRM') : 'VRM',
 
     listParameters: () => parameters,
+
+    listExpressions: () => expressionNames,
+
+    setExpression: (name, weight) => {
+      const resolved = resolveExpression(name)
+      if (!resolved) return false
+      vrm.expressionManager?.setValue(resolved, weight)
+      return true
+    },
+
+    listMotions: () => [],
+
+    playMotion: () => false, // VRMのモーション再生（VRMA等）はPhase 3以降で対応
 
     getParameter: (id) => {
       if (id.startsWith('expression.')) {

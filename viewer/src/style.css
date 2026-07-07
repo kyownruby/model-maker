@@ -70,9 +70,22 @@ body {
 }
 
 #status {
-  margin-left: auto;
   color: var(--muted);
   font-size: 12px;
+}
+
+#ws-status {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#ws-status.connected {
+  color: #7ee29a;
+  border-color: #3c6e4c;
 }
 
 #layout {

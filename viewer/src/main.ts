@@ -2,6 +2,7 @@ import type { ModelAdapter, ModelKind } from './core/types'
 import { createVrmAdapter } from './vrm/vrmAdapter'
 import { createLive2dAdapter } from './live2d/live2dAdapter'
 import { buildSliderPanel, syncSliderValues } from './ui/sliders'
+import { startBridge } from './bridge/wsBridge'
 
 /**
  * デフォルトのサンプルモデル。
@@ -18,15 +19,18 @@ const CUBISM_CORE_CDN = 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubi
 const stage = document.getElementById('stage')!
 const slidersRoot = document.getElementById('sliders')!
 const statusEl = document.getElementById('status')!
+const wsStatusEl = document.getElementById('ws-status')!
 const tabs = document.querySelectorAll<HTMLButtonElement>('.tab')
 const resetButton = document.getElementById('reset-all')!
 
 const query = new URLSearchParams(location.search)
-const vrmUrl = query.get('vrm') ?? DEFAULT_VRM_URL
-const live2dUrl = query.get('live2d') ?? DEFAULT_LIVE2D_URL
+const modelUrls: Record<ModelKind, string> = {
+  vrm: query.get('vrm') ?? DEFAULT_VRM_URL,
+  live2d: query.get('live2d') ?? DEFAULT_LIVE2D_URL,
+}
 
 let currentAdapter: ModelAdapter | null = null
-let loading = false
+let loading: Promise<void> | null = null
 
 /** vendor に Cubism Core が無い環境では公式CDNからのフォールバックを試す */
 async function ensureCubismCore(): Promise<void> {
@@ -40,40 +44,68 @@ async function ensureCubismCore(): Promise<void> {
   })
 }
 
+function setActiveTab(mode: ModelKind): void {
+  tabs.forEach((t) => t.classList.toggle('active', t.dataset.mode === mode))
+}
+
 async function switchMode(mode: ModelKind): Promise<void> {
-  if (loading) return
-  loading = true
-  statusEl.textContent = `loading ${mode} model...`
+  if (loading) await loading.catch(() => {})
+  const task = (async () => {
+    statusEl.textContent = `loading ${mode} model...`
+    setActiveTab(mode)
 
-  currentAdapter?.dispose()
-  currentAdapter = null
-  stage.innerHTML = ''
-  slidersRoot.innerHTML = ''
+    currentAdapter?.dispose()
+    currentAdapter = null
+    stage.innerHTML = ''
+    slidersRoot.innerHTML = ''
 
-  try {
     if (mode === 'vrm') {
-      currentAdapter = await createVrmAdapter(stage, vrmUrl)
+      currentAdapter = await createVrmAdapter(stage, modelUrls.vrm)
     } else {
       await ensureCubismCore()
-      currentAdapter = await createLive2dAdapter(stage, live2dUrl)
+      currentAdapter = await createLive2dAdapter(stage, modelUrls.live2d)
     }
     buildSliderPanel(slidersRoot, currentAdapter)
     const count = currentAdapter.listParameters().length
     statusEl.textContent = `${currentAdapter.modelName} — ${count} parameters`
+  })()
+  loading = task
+  try {
+    await task
+    bridge.notifyModelChanged()
   } catch (error) {
     console.error(error)
     statusEl.textContent = `error: ${error instanceof Error ? error.message : String(error)}`
+    throw error
   } finally {
-    loading = false
+    loading = null
   }
 }
+
+// MCPサーバーとの接続（サーバー未起動でも自動再接続で待ち続ける）
+const bridge = startBridge({
+  getAdapter: () => currentAdapter,
+
+  loadModel: async (url: string) => {
+    const kind: ModelKind = url.toLowerCase().endsWith('.vrm') ? 'vrm' : 'live2d'
+    modelUrls[kind] = url
+    await switchMode(kind)
+  },
+
+  onRemoteChange: () => {
+    if (currentAdapter) syncSliderValues(slidersRoot, currentAdapter)
+  },
+
+  onStatusChange: (connected) => {
+    wsStatusEl.textContent = connected ? 'MCP: connected' : 'MCP: offline'
+    wsStatusEl.classList.toggle('connected', connected)
+  },
+})
 
 tabs.forEach((tab) => {
   tab.addEventListener('click', () => {
     if (tab.classList.contains('active')) return
-    tabs.forEach((t) => t.classList.remove('active'))
-    tab.classList.add('active')
-    void switchMode(tab.dataset.mode as ModelKind)
+    void switchMode(tab.dataset.mode as ModelKind).catch(() => {})
   })
 })
 
@@ -83,4 +115,4 @@ resetButton.addEventListener('click', () => {
   syncSliderValues(slidersRoot, currentAdapter)
 })
 
-void switchMode('vrm')
+void switchMode('vrm').catch(() => {})
