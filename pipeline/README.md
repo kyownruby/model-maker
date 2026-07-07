@@ -22,6 +22,8 @@ pip install -r requirements.txt
 # PSD書き出しに使うpytoshopはビルドの都合で2段階（requirements.txt参照）
 pip install "setuptools==68.2.2"
 pip install pytoshop --no-build-isolation
+# pytoshop実行時に "No module named 'six'" が出たら:
+pip install six
 ```
 
 モデル（合計 約180MB）は初回実行時に Hugging Face から自動ダウンロードされ、

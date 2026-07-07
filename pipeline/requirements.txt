@@ -14,5 +14,6 @@ numpy
 pillow
 scipy
 onnxruntime
+six  # runtime dep of pytoshop that its --no-build-isolation install may miss
 torch
 torchvision
