@@ -37,6 +37,10 @@ export interface ModelAdapter {
   listMotions(): string[]
   /** モーションを再生する。未対応・名前不明なら false を返す */
   playMotion(name: string): boolean | Promise<boolean>
+  /** このモデルで書き出せる形式（例: vrm / glb / live2d_zip） */
+  listExportFormats(): string[]
+  /** モデルを書き出す。未対応形式なら null を返す */
+  exportModel(format: string): Promise<{ filename: string; blob: Blob } | null>
   /** すべてのパラメータをデフォルト値へ戻す */
   resetAll(): void
   /** シーン・WebGLリソースを破棄する（タブ切替時に呼ぶ） */

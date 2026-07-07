@@ -14,6 +14,8 @@ export type ViewerAction =
   | 'setMouth'
   | 'playMotion'
   | 'loadModel'
+  | 'exportModel'
+  | 'listExportFormats'
   | 'getStatus'
 
 export interface CommandMessage {

@@ -40,7 +40,23 @@ python3 split_parts.py character.png -o out/
 | `out/preview.png` | 元画像・セグメンテーション・各レイヤーのモンタージュ |
 | `out/report.json` | レイヤーごとの被覆率、空レイヤー警告、注意事項 |
 
-オプション: `--no-bg-removal`（透過済み素材向け）
+オプション:
+- `--no-bg-removal` — 透過済み素材向け
+- `--expressions <dir>` — 表情差分ディレクトリを取り込む（下記）
+
+## 表情差分の取り込み
+
+`face_<表情名>.png` の命名規則（例: `face_smile.png`, `face_angry.png`）で差分を置いたディレクトリを渡すと、
+基準画像と比較して**変化のあったパーツ（右目・左目・口）だけ**を抽出し、
+PSDの非表示グループ **「表情差分」** に `右目_smile` のような名前で追加する。
+
+```sh
+python3 split_parts.py character.png -o out/ --expressions diffs/
+```
+
+- 目を閉じた差分など、差分側でパーツ検出が消える場合は基準側のパーツ位置から切り出す
+- Cubism Editorでは、これらのレイヤーを表情モーフ（まばたき・口変形）の目標形状として使う
+- 抽出品質はパーツ検出の品質に依存する。小さすぎる顔・特殊な絵柄では手動切り出しが必要
 
 ## 自動化される処理
 

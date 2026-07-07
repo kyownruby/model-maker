@@ -20,6 +20,7 @@ const stage = document.getElementById('stage')!
 const slidersRoot = document.getElementById('sliders')!
 const statusEl = document.getElementById('status')!
 const wsStatusEl = document.getElementById('ws-status')!
+const exportButtonsEl = document.getElementById('export-buttons')!
 const tabs = document.querySelectorAll<HTMLButtonElement>('.tab')
 const resetButton = document.getElementById('reset-all')!
 
@@ -66,6 +67,7 @@ async function switchMode(mode: ModelKind): Promise<void> {
       currentAdapter = await createLive2dAdapter(stage, modelUrls.live2d)
     }
     buildSliderPanel(slidersRoot, currentAdapter)
+    buildExportButtons(currentAdapter)
     const count = currentAdapter.listParameters().length
     statusEl.textContent = `${currentAdapter.modelName} — ${count} parameters`
   })()
@@ -79,6 +81,33 @@ async function switchMode(mode: ModelKind): Promise<void> {
     throw error
   } finally {
     loading = null
+  }
+}
+
+function buildExportButtons(adapter: ModelAdapter): void {
+  exportButtonsEl.innerHTML = ''
+  for (const format of adapter.listExportFormats()) {
+    const button = document.createElement('button')
+    button.textContent = `⬇ ${format}`
+    button.addEventListener('click', async () => {
+      button.disabled = true
+      try {
+        const exported = await adapter.exportModel(format)
+        if (!exported) return
+        const url = URL.createObjectURL(exported.blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = exported.filename
+        a.click()
+        URL.revokeObjectURL(url)
+      } catch (error) {
+        console.error(error)
+        statusEl.textContent = `export error: ${error instanceof Error ? error.message : error}`
+      } finally {
+        button.disabled = false
+      }
+    })
+    exportButtonsEl.appendChild(button)
   }
 }
 

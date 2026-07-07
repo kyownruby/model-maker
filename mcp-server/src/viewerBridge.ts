@@ -2,6 +2,11 @@ import { WebSocket, WebSocketServer } from 'ws'
 import type { CommandMessage, ViewerAction, ViewerMessage } from './protocol.js'
 
 const RESPONSE_TIMEOUT_MS = 8000
+/** モデルの読み込み・書き出しは大きいデータを扱うため長めに待つ */
+const SLOW_ACTIONS: Record<string, number> = {
+  loadModel: 60_000,
+  exportModel: 120_000,
+}
 
 /**
  * ビューアとの WebSocket 接続を管理し、コマンドの送信と
@@ -89,13 +94,14 @@ export class ViewerBridge {
     }
     const id = String(this.nextId++)
     const command: CommandMessage = { type: 'command', id, action, args }
+    const timeoutMs = SLOW_ACTIONS[action] ?? RESPONSE_TIMEOUT_MS
     const promise = new Promise<unknown>((resolve, reject) => {
       this.pending.set(id, { resolve, reject })
       setTimeout(() => {
         if (this.pending.delete(id)) {
-          reject(new Error(`viewer response timed out (${RESPONSE_TIMEOUT_MS}ms)`))
+          reject(new Error(`viewer response timed out (${timeoutMs}ms)`))
         }
-      }, RESPONSE_TIMEOUT_MS)
+      }, timeoutMs)
     })
     this.viewer.send(JSON.stringify(command))
     return promise

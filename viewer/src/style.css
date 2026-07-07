@@ -74,8 +74,33 @@ body {
   font-size: 12px;
 }
 
-#ws-status {
+#export-buttons {
   margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+#export-buttons button {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#export-buttons button:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+#export-buttons button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+#ws-status {
   padding: 3px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);

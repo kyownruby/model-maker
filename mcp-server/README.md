@@ -51,6 +51,8 @@ MCPサーバーとビューアの起動順は問わない。
 | `play_motion` | `name` | モーション再生（現状Live2Dのみ。割り込み再生） |
 | `set_parameter` | `id`, `value` | 任意パラメータへの直接設定（範囲は自動クランプ） |
 | `load_model` | `url` | モデル切替（`.vrm`→VRM / それ以外→Live2D） |
+| `list_export_formats` | — | 書き出せる形式一覧（vrm / glb / live2d_zip） |
+| `export_model` | `format`, `path`? | モデルをファイルへ書き出し（省略時 `./exports/`）。PMXは[変換ルート](../docs/3d-and-mmd-route.md)参照 |
 | `get_status` | — | ビューア接続状態とモデル情報 |
 
 引数は正規化値（0〜1 / -1〜1）で統一し、Live2D の実レンジ（例: `ParamAngleX` ±30）への
