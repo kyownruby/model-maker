@@ -1,9 +1,14 @@
 # Python 3.10+
-# インストール手順（pytoshopはビルドの都合で2段階になる点に注意）:
-#   pip install -r requirements.txt
-#   pip install "setuptools==68.2.2" && pip install pytoshop --no-build-isolation
+# NOTE: keep this file ASCII-only. pip reads requirements.txt with the system
+# locale codec (cp932 on Japanese Windows), so non-ASCII bytes here break
+# `pip install -r requirements.txt`. Japanese install notes live in README.md.
 #
-# torchはCPU版で十分:
+# Install steps (pytoshop needs a 2-step install due to its build):
+#   pip install -r requirements.txt
+#   pip install "setuptools==68.2.2"
+#   pip install pytoshop --no-build-isolation
+#
+# torch: the CPU build is enough:
 #   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 numpy
 pillow
