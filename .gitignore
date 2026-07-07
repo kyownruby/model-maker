@@ -1,0 +1,8 @@
+node_modules/
+dist/
+
+# `npm run setup:assets` でダウンロードされる開発用アセット（再配布回避のため非コミット）
+viewer/public/vendor/live2dcubismcore.min.js
+viewer/public/models/vrm/*.vrm
+viewer/public/models/live2d/*
+!viewer/public/models/live2d/.gitkeep
