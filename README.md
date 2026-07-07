@@ -10,7 +10,7 @@
 ```
 model-maker/
 ├── viewer/      # モデルビューア（Phase 1）: VRM / Live2D をブラウザ表示し、スライダーで操作
-├── mcp-server/  # MCPサーバー（Phase 2 予定）: Claude Code からビューアを遠隔操作する司令塔
+├── mcp-server/  # MCPサーバー（Phase 2）: Claude Code からビューアを遠隔操作する司令塔
 └── docs/        # 設計書
 ```
 
@@ -36,9 +36,20 @@ npm run dev            # http://localhost:5173
 
 Live2D Cubism Core は[ライセンス](https://www.live2d.com/eula/live2d-proprietary-software-license-agreement_en.html)により npm 配布されないため、`setup:assets` が公式配布元から取得して `viewer/public/vendor/` に配置する（Gitには含めない）。
 
+## MCP連携（Claude Codeからの操作）
+
+```sh
+cd mcp-server
+npm install
+npm run build
+```
+
+Claude Code に登録してビューアを開くと、チャットから「笑って」「右を向いて」等で
+モデルを操作できる。登録方法・ツール一覧は [mcp-server/README.md](mcp-server/README.md) を参照。
+
 ## ロードマップ
 
 - [x] **Phase 1**: ビューア基盤（VRM/Live2D表示 + 手動スライダー操作）
-- [ ] **Phase 2**: MCPサーバー & Claude Code からの遠隔操作
+- [x] **Phase 2**: MCPサーバー & Claude Code からの遠隔操作
 - [ ] **Phase 3**: モデル制作パイプライン（パーツ分割の半自動化ほか）
 - [ ] **Phase 4**: OBS配信対応（透過背景・口パク連携）

@@ -29,6 +29,14 @@ export interface ModelAdapter {
   listParameters(): ParameterInfo[]
   getParameter(id: string): number | undefined
   setParameter(id: string, value: number): void
+  /** モデルが持つ表情名の一覧（VRM: Expression名 / Live2D: exp3の名前） */
+  listExpressions(): string[]
+  /** 表情を設定する。名前が見つからなければ false を返す */
+  setExpression(name: string, weight: number): boolean | Promise<boolean>
+  /** モデルが持つモーショングループ名の一覧（VRMは現状空） */
+  listMotions(): string[]
+  /** モーションを再生する。未対応・名前不明なら false を返す */
+  playMotion(name: string): boolean | Promise<boolean>
   /** すべてのパラメータをデフォルト値へ戻す */
   resetAll(): void
   /** シーン・WebGLリソースを破棄する（タブ切替時に呼ぶ） */
